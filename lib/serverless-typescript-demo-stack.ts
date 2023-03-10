@@ -9,6 +9,8 @@ import {
   aws_logs,
   aws_lambda,
 } from "aws-cdk-lib";
+import { BunFunction } from "./BunLambda";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 
 export class ServerlessTypescriptDemoStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -31,7 +33,7 @@ export class ServerlessTypescriptDemoStack extends Stack {
       POWERTOOLS_LOGGER_SAMPLE_RATE: '0.01',
       POWERTOOLS_LOGGER_LOG_EVENT: 'true',
       POWERTOOLS_METRICS_NAMESPACE: 'AwsSamples',
-  };
+    };
 
     const esBuildSettings = {
       minify: true
@@ -40,6 +42,7 @@ export class ServerlessTypescriptDemoStack extends Stack {
     const functionSettings = {
       handler: "handler",
       runtime: aws_lambda.Runtime.NODEJS_16_X,
+
       memorySize: 256,
       environment: {
         TABLE_NAME: productsTable.tableName,
@@ -47,8 +50,23 @@ export class ServerlessTypescriptDemoStack extends Stack {
       },
       logRetention: aws_logs.RetentionDays.ONE_WEEK,
       tracing: aws_lambda.Tracing.ACTIVE,
-      bundling: esBuildSettings
+      // bundling: esBuildSettings
     }
+
+    const bunLayer = new aws_lambda.LayerVersion(this, "BunLayer", {
+      code: aws_lambda.Code.fromAsset("lib/bun-lambda-layer.zip"),
+      compatibleRuntimes: [aws_lambda.Runtime.PROVIDED_AL2],
+      compatibleArchitectures: [aws_lambda.Architecture.X86_64]
+    })
+
+    // const getProductBunFunction = new BunFunction(this, "GetProductBunFunction", {
+    //   awsSdkConnectionReuse: true,
+    //   entry: "./src/api/get-product.ts",
+    //   ...functionSettings,
+    //   runtime: Runtime.PROVIDED_AL2
+    // }
+    // )
+    // getProductBunFunction.addLayers(bunLayer);
 
     const getProductsFunction = new aws_lambda_nodejs.NodejsFunction(
       this,
@@ -60,6 +78,8 @@ export class ServerlessTypescriptDemoStack extends Stack {
       }
     );
 
+    // getProductsFunction.addLayers(bunLayer);
+
     const getProductFunction = new aws_lambda_nodejs.NodejsFunction(
       this,
       "GetProductFunction",
@@ -68,7 +88,8 @@ export class ServerlessTypescriptDemoStack extends Stack {
         entry: "./src/api/get-product.ts",
         ...functionSettings
       }
-    );
+    )
+    // getProductFunction.addLayers(bunLayer);
 
     const putProductFunction = new aws_lambda_nodejs.NodejsFunction(
       this,
@@ -78,7 +99,9 @@ export class ServerlessTypescriptDemoStack extends Stack {
         entry: "./src/api/put-product.ts",
         ...functionSettings
       }
-    );
+    )
+
+    // putProductFunction.addLayers(bunLayer)
 
     const deleteProductFunction = new aws_lambda_nodejs.NodejsFunction(
       this,
@@ -88,10 +111,12 @@ export class ServerlessTypescriptDemoStack extends Stack {
         entry: "./src/api/delete-product.ts",
         ...functionSettings
       }
-    );
+    )
+    // deleteProductFunction.addLayers(bunLayer);
 
     productsTable.grantReadData(getProductsFunction);
     productsTable.grantReadData(getProductFunction);
+    // productsTable.grantReadData(getProductBunFunction);
     productsTable.grantWriteData(deleteProductFunction);
     productsTable.grantWriteData(putProductFunction);
 

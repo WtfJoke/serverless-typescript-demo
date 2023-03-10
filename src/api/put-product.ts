@@ -1,7 +1,7 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: MIT-0
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from "aws-lambda";
-import { Product } from "../model/product";
+import { Product } from "../model/Product";
 import { DynamoDbStore } from "../store/dynamodb/dynamodb-store";
 import { ProductStore } from "../store/product-store";
 import { captureLambdaHandler } from '@aws-lambda-powertools/tracer';
@@ -44,7 +44,7 @@ const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
   try {
     product = JSON.parse(event.body);
 
-    if ((typeof product) !== "object" ){
+    if ((typeof product) !== "object") {
       throw Error("Parsed product is not an object")
     }
   } catch (error) {
@@ -60,7 +60,7 @@ const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
   }
 
   if (id !== product.id) {
-    logger.error( `Product ID in path ${id} does not match product ID in body ${product.id}`);
+    logger.error(`Product ID in path ${id} does not match product ID in body ${product.id}`);
 
     return {
       statusCode: 400,
@@ -94,9 +94,9 @@ const lambdaHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPro
 };
 
 const handler = middy(lambdaHandler)
-    .use(captureLambdaHandler(tracer))
-    .use(logMetrics(metrics, { captureColdStartMetric: true }))
-    .use(injectLambdaContext(logger, { clearState: true }));
+  .use(captureLambdaHandler(tracer))
+  .use(logMetrics(metrics, { captureColdStartMetric: true }))
+  .use(injectLambdaContext(logger, { clearState: true }));
 
 export {
   handler
